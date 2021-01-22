@@ -19,4 +19,5 @@ func (user *User) Validate() *errors.RestErr {
 	if user.Email == "" {
 		return errors.NewBadRequestError("invalid email address")
 	}
+	return nil
 }
