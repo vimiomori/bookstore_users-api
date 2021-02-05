@@ -8,8 +8,8 @@ import (
 	"github.com/vimiomori/bookstore_users-api/utils/errors"
 )
 
-var (
-	usersDB = make(map[int64]*User)
+const (
+	queryInsertUser = "INSERT INTO USERS(first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
 )
 
 func (user *User) Get() *errors.RestErr {
@@ -29,14 +29,25 @@ func (user *User) Get() *errors.RestErr {
 }
 
 func (user *User) Save() *errors.RestErr {
-	current := usersDB[user.ID]
-	if current != nil {
-		if current.Email == user.Email {
-			return errors.NewBadRequestError(fmt.Sprintf("email %s is already registered", user.Email))
-		}
-		return errors.NewBadRequestError(fmt.Sprintf("user %d already exists", user.ID))
+	stmt, err := users_db.Client.Prepare(queryInsertUser)
+	if err != nil {
+		errors.NewInternalServerError(err.Error())
 	}
-	user.DateCreated = dates.GetNowString()
-	usersDB[user.ID] = user
+	defer stmt.Close()
+
+	insertResult, err := stmt.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated)
+	if err != nil {
+		return errors.NewInternalServerError(
+			fmt.Sprintf("error when trying to save user: %s", err.Error())
+		)
+	}
+
+	userID, err := insertresult.LastInsertId()
+	if err != nil {
+		return errors.NewInternalServerError(
+			fmt.Sprintf("error when trying to save user: %s", err.Error())
+		)
+	}
+	user.ID = userID
 	return nil
 }
