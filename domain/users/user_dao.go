@@ -10,6 +10,7 @@ import (
 const (
 	queryInsertUser = "INSERT INTO USERS(first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
 	queryGetUser    = "SELECT id, first_name, last_name, email, date_created FROM users WHERE id=?;"
+	queryUpdateUser = "UPDATE users SET first_name=?, last_name=?, email=? WHERE id=?;"
 )
 
 func (user *User) Get() *errors.RestErr {
@@ -21,11 +22,12 @@ func (user *User) Get() *errors.RestErr {
 		return errors.NewInternalServerError(err.Error())
 	}
 	defer stmt.Close()
+
 	result := stmt.QueryRow(user.ID)
+
 	if getErr := result.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated); getErr != nil {
 		return mysqlutils.ParseError(getErr)
 	}
-
 	return nil
 }
 
@@ -49,5 +51,18 @@ func (user *User) Save() *errors.RestErr {
 		return mysqlutils.ParseError(err)
 	}
 	user.ID = userID
+	return nil
+}
+
+func (user *User) Update() *errors.RestErr {
+	stmt, err := users_db.Client.Prepare(queryUpdateUser)
+	if err != nil {
+		errors.NewInternalServerError(err.Error())
+	}
+	defer stmt.Close()
+	_, updateErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.ID)
+	if updateErr != nil {
+		return mysqlutils.ParseError(updateErr)
+	}
 	return nil
 }
